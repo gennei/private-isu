@@ -19,3 +19,4 @@ portal/tmp
 
 # make image file
 /webapp/public/image/*
+.idea
