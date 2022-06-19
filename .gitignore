@@ -21,3 +21,4 @@ portal/tmp
 /webapp/public/image/*
 /webapp/log/*
 .idea
+*.log

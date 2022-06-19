@@ -14,6 +14,7 @@ alp:
     --sort sum -r \
     -m "/posts/\d+,/image/\d+,/@\w+" \
     -o count,method,uri,min,avg,max,sum \
-    --file ./webapp/log/nginx/access.log | tee nginx_digest_$(date +%Y%m%d%H%M).txt
+    --file ./webapp/log/nginx/access.log | tee nginx_digest_$(shell date +%Y%m%d%H%M).log
+
 pqd:
-	pt-query-digest --type slowlog ./webapp/log/mysql/mysql-slow.log | tee sql_digest_$(date +%Y%m%d%H%M).txt
+	pt-query-digest --type slowlog ./webapp/log/mysql/mysql-slow.log | tee sql_digest_$(shell date +%Y%m%d%H%M).log
