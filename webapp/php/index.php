@@ -291,7 +291,7 @@ $app->get('/', function (Request $request, Response $response) {
     $db = $this->get('db');
     $sql = <<<EOF
 SELECT 
-  `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` 
+  `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` , `users`.`account_name`
 FROM 
   `posts` 
   INNER JOIN `users` 
@@ -406,7 +406,7 @@ $app->post('/', function (Request $request, Response $response) {
         ]);
         $pid = $db->lastInsertId();
         $path = '/home/public/image/' . $pid . '.' . $ext;
-        file_put_contents($path, $$data);
+        file_put_contents($path, $data);
         return redirect($response, "/posts/{$pid}", 302);
     } else {
         $this->get('flash')->addMessage('notice', '画像が必須です');

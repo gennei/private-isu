@@ -5,8 +5,8 @@ RUN apt update && apt install -y \
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-RUN pecl install memcached \
-  && docker-php-ext-enable memcached
+RUN pecl install memcache memcached \
+  && docker-php-ext-enable memcache memcached
 
 RUN curl -sS https://getcomposer.org/installer | php \
   && mv composer.phar /usr/local/bin/composer
