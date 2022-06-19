@@ -294,7 +294,7 @@ $app->get('/', function (Request $request, Response $response) {
 SELECT 
   `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` , `users`.`account_name`
 FROM 
-  `posts` 
+  `posts` FORCE INDEX(`created_at_idx`)
   INNER JOIN `users` 
     ON `posts`.`user_id` = `users`.`id` 
     AND `users`.`del_flg` = 0 
@@ -323,7 +323,7 @@ $app->get('/posts', function (Request $request, Response $response) {
 SELECT 
   `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` 
 FROM 
-  `posts` 
+  `posts` FORCE INDEX(`created_at_idx`)
   INNER JOIN `users` 
     ON `posts`.`user_id` = `users`.`id` 
     AND `users`.`del_flg` = 0 
