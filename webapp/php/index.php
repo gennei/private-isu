@@ -144,13 +144,7 @@ $container->set('helper', function ($c) {
                 unset($comment);
                 $post['comments'] = array_reverse($comments);
 
-                $post['user'] = $this->fetch_first('SELECT * FROM `users` WHERE `id` = ?', $post['user_id']);
-                if ($post['user']['del_flg'] == 0) {
-                    $posts[] = $post;
-                }
-                if (count($posts) >= POSTS_PER_PAGE) {
-                    break;
-                }
+                $posts[] = $post;
             }
             return $posts;
         }
@@ -295,7 +289,20 @@ $app->get('/', function (Request $request, Response $response) {
     $me = $this->get('helper')->get_session_user();
 
     $db = $this->get('db');
-    $ps = $db->prepare('SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` ORDER BY `created_at` DESC');
+    $sql = <<<EOF
+SELECT 
+  `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` 
+FROM 
+  `posts` 
+  INNER JOIN `users` 
+    ON `posts`.`user_id` = `users`.`id` 
+    AND `users`.`del_flg` = 0 
+ORDER BY 
+  `posts`.`created_at` DESC 
+LIMIT 20;
+EOF;
+
+    $ps = $db->prepare($sql);
     $ps->execute();
     $results = $ps->fetchAll(PDO::FETCH_ASSOC);
     $posts = $this->get('helper')->make_posts($results);
@@ -311,7 +318,21 @@ $app->get('/posts', function (Request $request, Response $response) {
     $params = $request->getQueryParams();
     $max_created_at = $params['max_created_at'] ?? null;
     $db = $this->get('db');
-    $ps = $db->prepare('SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `created_at` <= ? ORDER BY `created_at` DESC');
+    $sql = <<<EOF
+SELECT 
+  `posts`.`id`, `posts`.`user_id`, `posts`.`body`, `posts`.`mime`, `posts`.`created_at` 
+FROM 
+  `posts` 
+  INNER JOIN `users` 
+    ON `posts`.`user_id` = `users`.`id` 
+    AND `users`.`del_flg` = 0 
+WHERE
+  `posts`.`created_at` <= ?
+ORDER BY 
+  `posts`.`created_at` DESC 
+LIMIT 20
+EOF;
+    $ps = $db->prepare($sql);
     $ps->execute([$max_created_at === null ? null : $max_created_at]);
     $results = $ps->fetchAll(PDO::FETCH_ASSOC);
     $posts = $this->get('helper')->make_posts($results);
