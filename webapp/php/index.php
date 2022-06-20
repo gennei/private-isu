@@ -6,7 +6,6 @@ use Slim\Factory\AppFactory;
 use DI\Container;
 
 require 'vendor/autoload.php';
-
 $_SERVER += ['PATH_INFO' => $_SERVER['REQUEST_URI']];
 $_SERVER['SCRIPT_NAME'] = '/' . basename($_SERVER['SCRIPT_FILENAME']);
 $file = dirname(__DIR__) . '/public' . $_SERVER['REQUEST_URI'];
@@ -147,9 +146,9 @@ $container->set('helper', function ($c) {
             foreach ($results as $post) {
                 $key = 'comment.' . $post['id'];
 
-                $comments = $cache->get($key);
-                if (empty($comments)) {
-                    echo "empty" . PHP_EOL;
+                $comments = unserialize($cache->get($key));
+                if ($comments === false) {
+                    echo $key . "is empty" . PHP_EOL;
                     $query = <<<EOF
                         SELECT c.*, u.account_name 
                         FROM `comments` AS c INNER JOIN `users` AS u ON c.user_id = u.id 
@@ -160,9 +159,10 @@ $container->set('helper', function ($c) {
                     $ps = $this->db()->prepare($query);
                     $ps->execute([$post['id']]);
                     $comments = $ps->fetchAll(PDO::FETCH_ASSOC);
-                    $cache->set($key, $comments);
+                    $cache->set($key, serialize($comments ?? []));
                 }
 
+                $comments = $comments ?? [];
                 $post['comment_count'] = count($comments);
                 if (!$all_comments) {
                     $comments = array_slice($comments, 0, 3);
