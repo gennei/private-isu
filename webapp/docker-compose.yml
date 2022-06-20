@@ -25,6 +25,7 @@ services:
       - memcached
     volumes:
       - ./public:/home/public
+      - ./log/php:/var/log/php
     init: true
     deploy:
       resources:

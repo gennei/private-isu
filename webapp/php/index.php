@@ -59,6 +59,12 @@ $container->set('db', function ($c) {
     );
 });
 
+$container->set('cache', function ($c) {
+  $memcache = new Memcache();
+  $memcache->connect('memcached', '11211');
+  return $memcache;
+});
+
 $container->set('view', function ($c) {
     return new class(__DIR__ . '/views/') extends \Slim\Views\PhpRenderer {
         public function render(\Psr\Http\Message\ResponseInterface $response, string $template, array $data = []): ResponseInterface {
@@ -74,12 +80,22 @@ $container->set('flash', function () {
 
 $container->set('helper', function ($c) {
     return new class($c) {
+        private PDO $db;
+        private Memcache $cache;
+
         public function __construct($c) {
             $this->db = $c->get('db');
+            $this->cache = $c->get('cache');
         }
 
-        public function db() {
+        public function db(): PDO
+        {
             return $this->db;
+        }
+
+        public function cache(): Memcache
+        {
+            return $this->cache;
         }
 
         public function db_initialize() {
@@ -127,19 +143,27 @@ $container->set('helper', function ($c) {
             $all_comments = $options['all_comments'] ?? false;
 
             $posts = [];
+            $cache = $this->cache();
             foreach ($results as $post) {
-                $query = <<<EOF
-SELECT c.*, u.account_name 
-FROM `comments` AS c INNER JOIN `users` AS u ON c.user_id = u.id 
-WHERE c.post_id = ?
-ORDER BY c.created_at DESC
-EOF;
-                $ps = $this->db()->prepare($query);
-                $ps->execute([$post['id']]);
-                $comments = $ps->fetchAll(PDO::FETCH_ASSOC);
+                $key = 'comment.' . $post['id'];
+
+                $comments = $cache->get($key);
+                if (empty($comments)) {
+                    echo "empty" . PHP_EOL;
+                    $query = <<<EOF
+                        SELECT c.*, u.account_name 
+                        FROM `comments` AS c INNER JOIN `users` AS u ON c.user_id = u.id 
+                        WHERE c.post_id = ?
+                        ORDER BY c.created_at DESC
+                    EOF;
+
+                    $ps = $this->db()->prepare($query);
+                    $ps->execute([$post['id']]);
+                    $comments = $ps->fetchAll(PDO::FETCH_ASSOC);
+                    $cache->set($key, $comments);
+                }
 
                 $post['comment_count'] = count($comments);
-
                 if (!$all_comments) {
                     $comments = array_slice($comments, 0, 3);
                 }
