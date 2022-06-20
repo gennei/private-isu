@@ -124,32 +124,32 @@ $container->set('helper', function ($c) {
         }
 
         public function make_posts(array $results, $options = []) {
-            $options += ['all_comments' => false];
-            $all_comments = $options['all_comments'];
+            $all_comments = $options['all_comments'] ?? false;
 
             $posts = [];
             foreach ($results as $post) {
-                $post['comment_count'] = $this->fetch_first('SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?', $post['id'])['count'];
                 $query = <<<EOF
 SELECT c.*, u.account_name 
 FROM `comments` AS c INNER JOIN `users` AS u ON c.user_id = u.id 
-WHERE c.post_id = ?   
+WHERE c.post_id = ?
+ORDER BY c.created_at DESC
 EOF;
-
-                if (!$all_comments) {
-                    $query .= ' LIMIT 3';
-                }
-
                 $ps = $this->db()->prepare($query);
                 $ps->execute([$post['id']]);
                 $comments = $ps->fetchAll(PDO::FETCH_ASSOC);
+
+                $post['comment_count'] = count($comments);
+
+                if (!$all_comments) {
+                    $comments = array_slice($comments, 0, 3);
+                }
+
                 $post['comments'] = array_reverse($comments);
 
                 $posts[] = $post;
             }
             return $posts;
         }
-
     };
 });
 
