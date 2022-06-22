@@ -79,22 +79,22 @@ $container->set('flash', function () {
 
 $container->set('helper', function ($c) {
     return new class($c) {
-        private PDO $db;
-        private Memcache $cache;
+//        private PDO $db;
+//        private Memcache $cache;
+        private $c;
 
         public function __construct($c) {
-            $this->db = $c->get('db');
-            $this->cache = $c->get('cache');
+            $this->c = $c;
         }
 
         public function db(): PDO
         {
-            return $this->db;
+            return $this->c->get('db');
         }
 
         public function cache(): Memcache
         {
-            return $this->cache;
+            return $this->c->get('cache');
         }
 
         public function db_initialize() {
@@ -143,12 +143,11 @@ $container->set('helper', function ($c) {
 
             $posts = [];
             $cache = $this->cache();
+            $ids = array_column($results, 'id');
+            $comments_ary = $cache->get($ids);
             foreach ($results as $post) {
-                $key = 'comment.' . $post['id'];
-
-                $comments = unserialize($cache->get($key));
+                $comments = $comments_ary[$post['id']] ?? false;
                 if ($comments === false) {
-                    echo $key . "is empty" . PHP_EOL;
                     $query = <<<EOF
                         SELECT c.*, u.account_name 
                         FROM `comments` AS c INNER JOIN `users` AS u ON c.user_id = u.id 
@@ -159,7 +158,9 @@ $container->set('helper', function ($c) {
                     $ps = $this->db()->prepare($query);
                     $ps->execute([$post['id']]);
                     $comments = $ps->fetchAll(PDO::FETCH_ASSOC);
-                    $cache->set($key, serialize($comments ?? []));
+                    $cache->set($post['id'], serialize($comments ?? []));
+                } else {
+                    $comments = unserialize($comments);
                 }
 
                 $comments = $comments ?? [];
@@ -241,11 +242,11 @@ $app->get('/login', function (Request $request, Response $response) {
 });
 
 $app->post('/login', function (Request $request, Response $response) {
+
     if ($this->get('helper')->get_session_user() !== null) {
         return redirect($response, '/', 302);
     }
 
-    $db = $this->get('db');
     $params = $request->getParsedBody();
     $user = $this->get('helper')->try_login($params['account_name'], $params['password']);
 
@@ -331,11 +332,13 @@ EOF;
     $results = $ps->fetchAll(PDO::FETCH_ASSOC);
     $posts = $this->get('helper')->make_posts($results);
 
-    return $this->get('view')->render($response, 'index.php', [
+     $body = $this->get('view')->render($response, 'index.php', [
         'posts' => $posts,
         'me' => $me,
         'flash' => $this->get('flash')->getFirstMessage('notice'),
     ]);
+
+    return $body;
 });
 
 $app->get('/posts', function (Request $request, Response $response) {
@@ -425,7 +428,7 @@ $app->post('/', function (Request $request, Response $response) {
         $ps->execute([
           $me['id'],
           $mime,
-          $data,
+          '',
           $params['body'],
         ]);
         $pid = $db->lastInsertId();

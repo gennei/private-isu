@@ -2,7 +2,7 @@ restart:
 	cd webapp  && docker compose down && docker compose up --build -d && cd ../
 
 clean:
-	rm -f ./webapp/log/*/*.log && rm -f ./webapp/public/image/*
+	rm -f ./webapp/log/*/*.log
 
 bench: clean restart
 	sleep 5
@@ -10,7 +10,7 @@ bench: clean restart
 
 alp:
 	alp json \
-    --sort sum -r \
+    --sort avg -r \
     -m "/posts/\d+,/image/\d+,/@\w+" \
     -o count,method,uri,min,avg,max,sum \
     --file ./webapp/log/nginx/access.log > nginx_digest_$(shell date +%Y%m%d%H%M).log
